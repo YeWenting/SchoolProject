@@ -6,6 +6,7 @@
 #include <getopt.h>
 #include <ctype.h>
 #include <string.h>
+#define MAX_PATH_LEN 128
 
 static int rflag = 0;
 static int aflag = 0;
@@ -13,17 +14,22 @@ static int lflag = 0, l_value;
 static int hflag = 0, h_value;
 static int mflag = 0, m_value;
 
-void print_dir(char *path)
+void print_dir(char path[])
 {
-    chdir(path);
-    DIR *dir = opendir(".");
-
+    DIR *dir = opendir(path);
     const char *str1 = ".", *str2 = "..";
     struct dirent *entry;
     struct stat file_stat;
+    char new_path[MAX_PATH_LEN] = "";
 
-    while (dir != NULL && (entry = readdir(dir)) != NULL) {
-        lstat(entry->d_name, &file_stat);
+    if (path[strlen(path) - 1] != '/')
+        strcat(path, "/");
+
+    while (dir != NULL && (entry = readdir(dir)) != NULL)
+    {
+        strcpy(new_path, path);
+        strcat(new_path, entry->d_name);
+        lstat(new_path, &file_stat);
 
         if (lflag && file_stat.st_size < l_value)
             continue;
@@ -34,20 +40,10 @@ void print_dir(char *path)
         if (!aflag && entry->d_name[0] == '.')
             continue;
 
-        printf("%s %lld\n", entry->d_name, file_stat.st_size);
-
-        int test = S_ISDIR(file_stat.st_mode);
+        printf("%s %lld\n", new_path, file_stat.st_size);
 
         if (rflag && S_ISDIR(file_stat.st_mode) && strcmp(entry->d_name, str1) != 0 && strcmp(entry->d_name, str2) != 0)
-        {
-            DIR *dir = NULL;
-            if (dir = opendir(entry->d_name) != NULL)
-            {
-                chdir(entry->d_name);
-                print_dir(".");
-                chdir("../");
-            }
-        }
+            print_dir(new_path);
     }
     closedir(dir);
 }
@@ -64,62 +60,41 @@ int main(int argc, char **argv) {
                 rflag = 1;
                 break;
             case 'l':
+                lflag = 1;
                 l_value = atoi(optarg);
                 break;
             case 'h':
+                hflag = 1;
                 h_value = atoi(optarg);
+                printf("h: %d", h_value);
                 break;
             case 'm':
+                mflag = 1;
                 m_value = atoi(optarg);
                 break;
-            case '?':
-                if (optopt == 'l' || optopt == 'h' || optopt == 'm')
-                    fprintf(stderr, "Option -%c requires an argument.\n", optopt);
-                else if (isprint(optopt))
-                    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
-                else
-                    fprintf(stderr,
-                            "Unknown option character `\\x%x'.\n",
-                            optopt);
-                return 1;
             default:
                 exit(-1);
         }
-//
-//    rflag = 1;
-//
-//        struct stat st;
-//        char *path = "CMakeFiles/3.6.2/";
-//
-//        if (0 > stat(path, &st)) {
-//            fprintf(stderr, "Usage: don't exist such file %s\n", path);
-//            exit(1);
-//        }
-//
-//        if (S_ISDIR(st.st_mode)) {
-//            print_dir(path);
-//        } else {
-//            printf("%s %lld\n", path, st.st_size);
-//        }
 
-//    printf ("aflag = %d, bflag = %d, cvalue = %s\n",
-//            aflag, bflag, cvalue);
-
+    /* Default argument */
+    if (optind == argc)
+    {
+        argv[argc] = (char *) malloc(sizeof(char) * 1 + 1);
+        strcpy(argv[argc++], ".");
+    }
 
     for (i = optind; i < argc; i++) {
         struct stat st;
-        char *path = argv[i];
+        char path[MAX_PATH_LEN];
 
+        strcpy(path, argv[i]);
         if (0 > stat(path, &st)) {
             fprintf(stderr, "Usage: don't exist such file %s\n", path);
             exit(1);
         }
 
         if (S_ISDIR(st.st_mode)) {
-            DIR *dir;
-            dir = opendir(path);
-            print_dir(dir);
-            closedir(dir);
+            print_dir(path);
         } else {
             printf("%s %lld\n", path, st.st_size);
         }
