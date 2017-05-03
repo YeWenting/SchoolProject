@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <getopt.h>
-#include <ctype.h>
 #include <string.h>
 #define MAX_PATH_LEN 128
 
@@ -66,7 +65,6 @@ int main(int argc, char **argv) {
             case 'h':
                 hflag = 1;
                 h_value = atoi(optarg);
-                printf("h: %d", h_value);
                 break;
             case 'm':
                 mflag = 1;
